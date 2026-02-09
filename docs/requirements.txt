@@ -1,0 +1,7 @@
+pandas
+numpy
+SQLAlchemy
+scikit-learn
+psycopg2-binary
+flake8
+pytest
