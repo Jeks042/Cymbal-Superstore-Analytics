@@ -1,114 +1,150 @@
-# Customer Churn, Retention, and Value Prioritization
-**Cymbal Superstore - End-to-End Analytics Case Study**
+# Customer Churn, Retention and Value Prioritisation
 
-## Project Overview
-This project simulates a real-world analytics engagement for an ecommerce retailer, Cymbal Superstore. The objective is to move beyond descriptive reporting and deliver actionable customer intelligence through customer segmentation, churn risk modeling, value-based prioritization, cohort retention analysis, and executive-level Power BI storytelling.
+**Cymbal Superstore — simulated end-to-end analytics case study**
 
-The outcome is a decision-ready analytics system that helps stakeholders identify where churn risk is concentrated, quantify exposed revenue, and understand how retention evolves over time.
+> **Portfolio disclosure:** Cymbal Superstore is a simulated business scenario. The project is intended to demonstrate analytical reasoning, data modelling and decision support. Any commercial impact discussed is scenario-based rather than a realised business result.
 
-## Business Questions
-- Which customers are most likely to churn?
-- How much revenue is at risk due to churn?
-- Which customer segments should be prioritized for retention?
-- How does retention behavior change over time and across segments?
+## Executive summary
 
-## Tech Stack
-- PostgreSQL for analytics engineering and feature creation
-- Python (pandas, scikit-learn) for churn modeling and scoring
-- Power BI for executive dashboards and business storytelling
+This project develops a decision-support workflow for an e-commerce retention team. It combines PostgreSQL, Python and Power BI to identify customers showing elevated churn risk, examine how retention changes across cohorts and prioritise customer groups by both risk and potential value.
 
-Heavy transformations are performed in SQL and Python, while Power BI is used as the presentation layer.
+The project is designed to answer four business questions:
 
-## Data Model
-The analytics layer follows a clean, star-like structure:
-- `dim_customer`: one row per customer
-- `customer_orders_enriched`: order-level fact table
-- `dim_date`: dynamically generated date dimension (fiscal year starts April 1)
-- Cohort tables for retention and segment-level cohort analysis
+1. Which customers appear most at risk of becoming inactive?
+2. Where is the greatest potential value exposure?
+3. Which customer groups should receive retention attention first?
+4. How does repeat purchasing change over time and across cohorts?
 
-This design keeps Power BI performant and minimizes complex DAX logic.
+## Business context
 
-## Customer Segmentation
-Customers are grouped into four behavioral segments:
+The analysis assumes that the retention team has limited capacity. The goal is therefore not to classify every customer perfectly. It is to produce a ranked, explainable view of risk that can support prioritisation and further testing.
+
+## Analytical workflow
+
+### 1. Data preparation and modelling
+
+- PostgreSQL for transformation, feature creation and reusable analytical tables
+- A customer dimension with one record per customer
+- An enriched order-level fact table
+- A dynamic date dimension using an April-to-March fiscal year
+- Cohort tables for retention and segment-level analysis
+
+### 2. Customer segmentation
+
+Customers are grouped into four behavioural segments:
+
 - New Customers
 - Occasional Shoppers
 - Loyal Low Spend
 - Champions
 
-These segments are used consistently across churn modeling, prioritization, and retention analysis.
+The same segment definitions are used across churn, value and cohort reporting to keep the analysis consistent.
 
-## Churn Modeling
-### Definition
-A customer is labeled as churned if they have not purchased within 180 days of their last order.
+### 3. Churn-risk model
 
-### Model
-- Logistic Regression (selected for interpretability)
-- Stratified train/test split
-- Class imbalance handled with `class_weight="balanced"`
+A customer is provisionally labelled inactive when no purchase has occurred within 180 days of the last order. Logistic regression is used because its outputs are interpretable and suitable for ranking customers.
 
-### Features
-- Lifetime behavior (frequency, monetary value, tenure)
-- Time-windowed behavior (30/90-day spend and order activity)
-- Leakage prevention applied during feature design
+Current features include:
 
-### Performance
-- ROC-AUC approximately 0.76
-- Model is designed for ranking and prioritization, not strict binary classification
+- Purchase frequency
+- Historical monetary value
+- Customer tenure
+- Recent 30-day and 90-day activity
+- Recent spend and order behaviour
 
-## Value-Based Prioritization
-To translate churn risk into business impact:
+The current model records ROC-AUC of approximately 0.76. This is treated as an initial ranking result rather than proof that the model is ready for operational deployment.
 
-`value_at_risk = churn_probability x customer_lifetime_value`
+### 4. Value prioritisation
 
-Customers are grouped into priority bands based on churn risk and customer value:
-- HIGH: high churn risk and high customer value
-- MEDIUM: mixed risk/value profile
-- LOW: low expected revenue exposure
+The current prioritisation measure is:
 
-This ensures retention actions are focused where they produce the greatest impact.
+```text
+value_at_risk = estimated_churn_probability × estimated_customer_value
+```
 
-## Retention and Cohort Analysis
-Retention is analyzed with cohort methods based on each customer's first purchase month.
+This is a screening measure, not a complete estimate of recoverable value. A production decision should also consider contribution margin, contact cost, incentive cost and the probability that an intervention would change the outcome.
 
-### Key Principles
-- Retention is measured relative to cohort size
-- Retained customers are not additive across months
-- Cohort size defines the baseline population
+### 5. Cohort retention
 
-### Outputs
-- Retention curves over time
+Retention is measured from each customer's first-purchase month. The outputs include:
+
+- Retention curves
 - Cohort heatmaps
-- Segment-level weighted retention rates
+- Weighted segment-level retention
+- Early-life drop-off and later stabilisation patterns
 
-These outputs reveal strong early-life drop-off and longer-term stabilization patterns.
+## Power BI report
 
-## Power BI Dashboards
-### Page 1: Executive Overview
-- Total Customers
-- Total Revenue
-- Churn Rate
-- Total Value at Risk
-- Priority-based risk distribution
+### Page 1 — Executive overview
 
-### Page 2: Churn and Risk Drivers
-- Churn rate and risk by segment
-- Value at risk by segment and priority
+- Total customers
+- Total revenue
+- Inactivity rate
+- Estimated value at risk
+- Priority-band distribution
+
+### Page 2 — Risk and customer value
+
+- Risk by customer segment
+- Value exposure by segment and priority
 - Average order value by segment
+- Customer-level prioritisation
 
-### Page 3: Retention and Cohorts
-- Retention trends over time
-- Cohort heatmaps
-- Segment-level weighted retention
+### Page 3 — Retention and cohorts
 
-## Key Insights
-- Churn risk is concentrated in specific segments
-- New Customers drive volume-based exposure
-- Loyal Low Spend customers drive probability-based risk
-- Retention is front-loaded, requiring early intervention
+- Retention over time
+- Cohort heatmap
+- Weighted segment retention
+- New-customer drop-off
 
-## Next Steps
-Potential extensions include:
-- Survival analysis (time-to-churn modeling)
-- Uplift modeling for campaign impact
-- Cost-aware retention optimization
-- Acquisition versus retention trade-off analysis
+## Current findings
+
+The initial analysis suggests that:
+
+- Risk and value exposure are not concentrated in exactly the same customer groups.
+- New customers create substantial volume-based exposure because many have not yet established repeat behaviour.
+- Some lower-spend loyal customers show higher modelled risk but lower individual value exposure.
+- The strongest retention loss appears early in the customer lifecycle, indicating that onboarding and early repeat-purchase behaviour deserve separate investigation.
+
+These findings are directional until the sensitivity and validation work below is completed.
+
+## Limitations
+
+- The scenario is simulated and should not be interpreted as a live commercial deployment.
+- The 180-day inactivity rule is a working assumption and requires sensitivity testing against alternative windows.
+- The current stratified random train/test split does not fully represent future-period performance.
+- ROC-AUC alone is insufficient for selecting an intervention threshold.
+- Customer lifetime value is simplified and does not yet use contribution margin or uncertainty ranges.
+- Transactional data without treatment assignment cannot establish that a retention campaign would cause customers to stay.
+
+## Validation and improvement plan
+
+The next iteration will add:
+
+1. A clearly defined observation date and prediction window
+2. Time-based training and validation periods
+3. Sensitivity tests for 90-day, 180-day and 270-day inactivity definitions
+4. A simple behavioural baseline for comparison
+5. Precision-recall, PR-AUC, lift and calibration analysis
+6. Precision at realistic contact-capacity thresholds
+7. Cost and contribution-margin scenarios
+8. Transparent segment and priority thresholds
+9. Dashboard screenshots and a one-page executive decision memo
+
+Uplift modelling will not be added to this dataset unless valid treatment and control data become available. That question is better addressed in a dedicated experimentation case study.
+
+## Repository structure
+
+- `sql/` — data preparation, analytical tables and feature queries
+- `python/` — modelling, scoring and validation
+- `data/` — project data and supporting outputs
+- `data visualisation/power_bi/` — Power BI report materials
+- `docs/` — project documentation
+
+## Technology
+
+`PostgreSQL` · `Python` · `pandas` · `scikit-learn` · `Power BI`
+
+## Reproducibility
+
+Install the Python dependencies from `requirements.txt`, review the SQL scripts in execution order and use the generated analytical outputs as the Power BI presentation layer. No result should be treated as production-ready without completing the validation plan above.
