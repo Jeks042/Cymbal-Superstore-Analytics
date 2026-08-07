@@ -1,150 +1,152 @@
 # Customer Churn, Retention and Value Prioritisation
 
-**Cymbal Superstore — simulated end-to-end analytics case study**
+**Cymbal Superstore — simulated customer-retention analytics case study**
 
-> **Portfolio disclosure:** Cymbal Superstore is a simulated business scenario. The project is intended to demonstrate analytical reasoning, data modelling and decision support. Any commercial impact discussed is scenario-based rather than a realised business result.
+> **Disclosure:** Cymbal Superstore is a simulated business scenario. The analysis demonstrates customer analytics, decision support and model governance; commercial impact is illustrative rather than a realised business result.
 
-## Executive summary
+## Executive decision
 
-This project develops a decision-support workflow for an e-commerce retention team. It combines PostgreSQL, Python and Power BI to identify customers showing elevated churn risk, examine how retention changes across cohorts and prioritise customer groups by both risk and potential value.
+**Use churn risk and customer value together to prioritise retention review, with particular attention to early-life customers and high-value accounts. Do not treat the current churn score as evidence that an intervention will prevent churn.**
 
-The project is designed to answer four business questions:
+The analysis combines PostgreSQL, Python and Power BI to identify customers showing elevated inactivity risk, estimate value exposure and examine how repeat purchasing changes across cohorts.
 
-1. Which customers appear most at risk of becoming inactive?
-2. Where is the greatest potential value exposure?
-3. Which customer groups should receive retention attention first?
-4. How does repeat purchasing change over time and across cohorts?
+The central business implication is that **risk and value are not concentrated in the same customer groups**. A retention team with limited capacity should therefore avoid prioritising customers on churn probability alone.
+
+## Decision evidence
+
+| Question | Finding | Decision implication |
+|---|---|---|
+| Which customers appear most at risk? | A logistic-regression model using purchase frequency, historical spend, tenure and recent activity achieved ROC-AUC of approximately **0.76** on the current validation design. | Use the score for relative risk ranking, not as a production deployment claim. |
+| Where is value exposure concentrated? | High churn probability does not always coincide with high customer value. | Prioritisation should combine risk and value rather than using either metric independently. |
+| Where does retention weaken most? | The strongest loss in repeat purchasing appears early in the customer lifecycle. | Onboarding and early repeat-purchase behaviour deserve focused retention analysis. |
+| Should the model determine who receives an intervention? | No treatment/control data are available to estimate preventable churn or campaign lift. | The model supports screening and prioritisation only; intervention effectiveness requires a separate experiment. |
 
 ## Business context
 
-The analysis assumes that the retention team has limited capacity. The goal is therefore not to classify every customer perfectly. It is to produce a ranked, explainable view of risk that can support prioritisation and further testing.
+The scenario assumes a retention team with limited contact capacity. The decision problem is therefore not to classify every customer perfectly, but to identify where analytical attention and retention resources are most likely to matter.
 
-## Analytical workflow
+The workflow answers four questions:
 
-### 1. Data preparation and modelling
+1. Which customers show the strongest signs of becoming inactive?
+2. Which customers represent the greatest potential value exposure?
+3. Which customer groups should be reviewed first when retention capacity is limited?
+4. How does repeat purchasing change over time and across acquisition cohorts?
 
-- PostgreSQL for transformation, feature creation and reusable analytical tables
-- A customer dimension with one record per customer
-- An enriched order-level fact table
-- A dynamic date dimension using an April-to-March fiscal year
-- Cohort tables for retention and segment-level analysis
+## Customer-risk framework
 
-### 2. Customer segmentation
+A customer is labelled inactive when no purchase has occurred within **180 days** of the last order. That threshold is a modelling assumption rather than a universal definition of churn.
 
-Customers are grouped into four behavioural segments:
+The logistic-regression model uses interpretable pre-outcome behavioural features including:
+
+- purchase frequency;
+- historical monetary value;
+- customer tenure;
+- recent 30-day and 90-day activity; and
+- recent spend and order behaviour.
+
+The model's ROC-AUC of approximately **0.76** indicates useful ranking ability under the current validation setup. It does **not** establish future-period performance, treatment responsiveness or operational profitability.
+
+## Value prioritisation
+
+Customer priority is informed by the screening measure:
+
+```text
+value_at_risk = estimated_churn_probability × estimated_customer_value
+```
+
+This measure helps distinguish customers who are high risk from customers whose potential value exposure is materially larger.
+
+It is intentionally treated as a **prioritisation proxy**, not an estimate of recoverable value. A live retention decision would also require contribution margin, contact cost, incentive cost and evidence that an intervention changes customer behaviour.
+
+## Retention and cohort findings
+
+Retention is measured from each customer's first-purchase month and reviewed through cohort curves, heatmaps and segment-level summaries.
+
+The main patterns are:
+
+- **Early-life retention is the principal weakness.** The largest loss in repeat purchasing occurs soon after acquisition, suggesting that first-to-second purchase behaviour is a distinct problem from later-life churn.
+- **New customers create material volume exposure.** Their individual value may vary, but their scale makes weak early retention commercially relevant.
+- **Risk and value require separate interpretation.** Some lower-spend loyal customers show elevated modelled risk without carrying the highest individual value exposure.
+- **Customer segments behave differently over time.** Cohort analysis adds context that a single churn probability cannot provide.
+
+These findings support prioritisation and further testing; they do not establish the causal effect of a retention intervention.
+
+## Customer segmentation
+
+Customers are grouped into four behavioural segments used consistently across churn, value and retention reporting:
 
 - New Customers
 - Occasional Shoppers
 - Loyal Low Spend
 - Champions
 
-The same segment definitions are used across churn, value and cohort reporting to keep the analysis consistent.
+Using one segment definition across the analytical workflow keeps risk, value and cohort views comparable for stakeholders.
 
-### 3. Churn-risk model
+## Power BI decision report
 
-A customer is provisionally labelled inactive when no purchase has occurred within 180 days of the last order. Logistic regression is used because its outputs are interpretable and suitable for ranking customers.
+The Power BI report is organised around the retention decision rather than the modelling workflow.
 
-Current features include:
+### Executive overview
 
-- Purchase frequency
-- Historical monetary value
-- Customer tenure
-- Recent 30-day and 90-day activity
-- Recent spend and order behaviour
+- customer population and revenue context;
+- inactivity rate;
+- estimated value at risk; and
+- distribution of customer priority bands.
 
-The current model records ROC-AUC of approximately 0.76. This is treated as an initial ranking result rather than proof that the model is ready for operational deployment.
+### Risk and customer value
 
-### 4. Value prioritisation
+- churn risk by customer segment;
+- value exposure by segment and priority;
+- average order value by segment; and
+- customer-level prioritisation.
 
-The current prioritisation measure is:
+### Retention and cohorts
 
-```text
-value_at_risk = estimated_churn_probability × estimated_customer_value
-```
+- retention curves over customer age;
+- cohort heatmap;
+- weighted segment retention; and
+- early-life customer drop-off.
 
-This is a screening measure, not a complete estimate of recoverable value. A production decision should also consider contribution margin, contact cost, incentive cost and the probability that an intervention would change the outcome.
+## Analytical controls and decision boundaries
 
-### 5. Cohort retention
+Several controls prevent the model from being presented as more actionable than the evidence supports:
 
-Retention is measured from each customer's first-purchase month. The outputs include:
+- The 180-day inactivity definition is explicitly treated as an assumption.
+- The current train/test design is a stratified random split, so results are not presented as proof of future-period stability.
+- ROC-AUC is used as a ranking diagnostic rather than the sole basis for operational threshold selection.
+- `value_at_risk` is a screening proxy rather than recoverable customer value.
+- No claim is made that high-risk customers are necessarily persuadable to stay.
+- No uplift or incremental-retention claim is made because the dataset does not contain valid treatment and control assignment.
 
-- Retention curves
-- Cohort heatmaps
-- Weighted segment-level retention
-- Early-life drop-off and later stabilisation patterns
+## What would be required before operational deployment
 
-## Power BI report
+A production retention policy would require stronger prospective validation, including:
 
-### Page 1 — Executive overview
+- a fixed observation date and prediction window;
+- time-based model validation;
+- sensitivity testing of the inactivity definition;
+- calibration, precision-recall and lift at realistic contact capacities;
+- contribution-margin and intervention-cost assumptions; and
+- direct experimental evidence that the selected retention action creates incremental value.
 
-- Total customers
-- Total revenue
-- Inactivity rate
-- Estimated value at risk
-- Priority-band distribution
-
-### Page 2 — Risk and customer value
-
-- Risk by customer segment
-- Value exposure by segment and priority
-- Average order value by segment
-- Customer-level prioritisation
-
-### Page 3 — Retention and cohorts
-
-- Retention over time
-- Cohort heatmap
-- Weighted segment retention
-- New-customer drop-off
-
-## Current findings
-
-The initial analysis suggests that:
-
-- Risk and value exposure are not concentrated in exactly the same customer groups.
-- New customers create substantial volume-based exposure because many have not yet established repeat behaviour.
-- Some lower-spend loyal customers show higher modelled risk but lower individual value exposure.
-- The strongest retention loss appears early in the customer lifecycle, indicating that onboarding and early repeat-purchase behaviour deserve separate investigation.
-
-These findings are directional until the sensitivity and validation work below is completed.
-
-## Limitations
-
-- The scenario is simulated and should not be interpreted as a live commercial deployment.
-- The 180-day inactivity rule is a working assumption and requires sensitivity testing against alternative windows.
-- The current stratified random train/test split does not fully represent future-period performance.
-- ROC-AUC alone is insufficient for selecting an intervention threshold.
-- Customer lifetime value is simplified and does not yet use contribution margin or uncertainty ranges.
-- Transactional data without treatment assignment cannot establish that a retention campaign would cause customers to stay.
-
-## Validation and improvement plan
-
-The next iteration will add:
-
-1. A clearly defined observation date and prediction window
-2. Time-based training and validation periods
-3. Sensitivity tests for 90-day, 180-day and 270-day inactivity definitions
-4. A simple behavioural baseline for comparison
-5. Precision-recall, PR-AUC, lift and calibration analysis
-6. Precision at realistic contact-capacity thresholds
-7. Cost and contribution-margin scenarios
-8. Transparent segment and priority thresholds
-9. Dashboard screenshots and a one-page executive decision memo
-
-Uplift modelling will not be added to this dataset unless valid treatment and control data become available. That question is better addressed in a dedicated experimentation case study.
+The appropriate next step for intervention effectiveness is a controlled experiment, not a more complex churn model on the same observational data.
 
 ## Repository structure
 
-- `sql/` — data preparation, analytical tables and feature queries
+- `sql/` — analytical tables, customer features and cohort preparation
 - `python/` — modelling, scoring and validation
-- `data/` — project data and supporting outputs
-- `data visualisation/power_bi/` — Power BI report materials
-- `docs/` — project documentation
+- `data/` — project data and analytical outputs
+- `data visualisation/power_bi/` — Power BI reporting materials
+- `docs/` — supporting project documentation
 
 ## Technology
 
 `PostgreSQL` · `Python` · `pandas` · `scikit-learn` · `Power BI`
 
-## Reproducibility
+## Analytical position
 
-Install the Python dependencies from `requirements.txt`, review the SQL scripts in execution order and use the generated analytical outputs as the Power BI presentation layer. No result should be treated as production-ready without completing the validation plan above.
+The project demonstrates a practical distinction that matters in retention analytics:
+
+**A churn model estimates who is more likely to become inactive. It does not establish who can be persuaded to stay, which intervention will work, or whether that intervention will be profitable.**
+
+The completed analysis therefore uses the model for customer-risk prioritisation while keeping causal intervention decisions outside the claims supported by the data.
